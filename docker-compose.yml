@@ -1,0 +1,39 @@
+version: "3.7"
+
+services:
+
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - postgres_data:/home/app/web/postgresql_data
+    env_file: .env.pgdb
+    expose:
+      - 5432
+
+  web:
+    build: DeployProject
+    command: >
+      sh -c "python manage.py migrate && 
+             python manage.py createsuperuser --noinput &&
+             gunicorn DeployProject.wsgi:application -b 0.0.0.0:8000"
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    env_file: .env.web
+    expose:
+      - 8000
+    depends_on:
+      - db
+
+## Build from Dockerfile
+  nginx:
+    build: nginx
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    ports:
+      - 8080:80
+    depends_on:
+      - web
+
+volumes:
+  static_volume:
+  postgres_data:
